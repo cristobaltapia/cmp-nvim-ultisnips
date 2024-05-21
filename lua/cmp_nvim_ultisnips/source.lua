@@ -24,34 +24,28 @@ end
 
 function source.complete(self, _, callback)
   local items = {}
-  local snippets = cmpu_snippets.load_snippets(self.expandable_only)
 
-  for _, snippet in pairs(snippets) do
-    local is_regex_snippet = snippet.options:match("r")
-    local item = {
-      insertText = (is_regex_snippet and snippet.matched) or snippet.trigger,
-      label = snippet.trigger,
+  -- Get all UltiSnips snippets for the current filetype
+  local snippets = vim.fn["UltiSnips#SnippetsInCurrentScope"]()
+
+  -- Iterate through each snippet and format it for nvim-cmp
+  for trigger, snippet in pairs(snippets) do
+    table.insert(items, {
+      label = trigger,
+      insertText = trigger,
       kind = cmp.lsp.CompletionItemKind.Snippet,
-      snippet = snippet,
-    }
-    table.insert(items, item)
+      documentation = {
+        kind = cmp.lsp.MarkupKind.Markdown,
+        value = snippet,
+      },
+    })
   end
-  callback {
-    items = items,
-    -- If true, cmp will update the items on every keystroke.
-    -- When self.expandable_only == false, the snippets are cached so no need to update.
-    isIncomplete = self.expandable_only,
-  }
+
+  -- Invoke the callback with the completion items
+  callback({ items = items, isIncomplete = false })
 end
 
 function source.resolve(self, completion_item, callback)
-  local doc_string = self.config.documentation(completion_item.snippet)
-  if doc_string ~= nil then
-    completion_item.documentation = {
-      kind = cmp.lsp.MarkupKind.Markdown,
-      value = doc_string,
-    }
-  end
   callback(completion_item)
 end
 
